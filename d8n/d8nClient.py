@@ -7,9 +7,10 @@ import json
 class d8nClient:
     def __init__(self, api_key):
         self.API_key = api_key
+        self._url = 'engisense.com'
 
     def from_local_file(self, path, project_id = None):
-        conn = http.client.HTTPSConnection("d8n.host")
+        conn = http.client.HTTPSConnection(self._url)
         dataList = []
 
         boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
@@ -42,7 +43,7 @@ class d8nClient:
         return json.loads(data)
 
     def fetch_status(self, id):
-        url = "https://d8n.host/api/get_status?id={0}".format(id)
+        url = "https://{0}/api/get_status?id={1}".format(self._url,id)
 
         payload={}
         files={}
@@ -56,8 +57,7 @@ class d8nClient:
 
 
     def get_completed(self, id):
-        url = "https://d8n.host/api/completed?id={0}".format(id)
-
+        url = "https://{0}/api/completed?id={1}".format(self._url,id)
         payload={}
         headers = {
             'API-KEY': self.API_key
@@ -68,7 +68,7 @@ class d8nClient:
         return json.loads(response.content.decode('utf-8'))
     
     def download_entry(self, id, format = 'yolo'):
-        url = "https://d8n.host/api/makesense?page=0".format(id)
+        url = "https://{0}/api/completed?id={1}".format(self._url,id)
         
         headers = {
             'API-KEY': self.API_key,
