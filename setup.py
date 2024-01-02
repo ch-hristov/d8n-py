@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='d8n',
-    version='0.2.0',
+    version='0.2.6',
     author='Christo',
     author_email='christochristov@duck.com',
     description='d8n API python library',
