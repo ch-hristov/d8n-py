@@ -1,1 +1,1 @@
-from .d8n.d8nClient import d8nClient
+from .d8n.d8nClient import d8nClient, d8nResult, d8nCompleteResult
