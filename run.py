@@ -8,7 +8,7 @@ result_id = client.from_local_file('/Users/christosavovchristov/symbol-api/d8n-j
 
 print(result_id)
 # Fetch the status of your request
-status = client.fetch_status(result_id)
+status = client.fetch_status(result_id.id)
 
 # Once the status is completed, download the resulting json data or image.
 # The data is in x, y, w, h format, normalized to original the image size.

@@ -119,14 +119,12 @@ class d8nClient:
         dataList.append(encode('--'+boundary+'--'))
         dataList.append(encode(''))
         body = b'\r\n'.join(dataList)
+
         payload = body
         headers = {
             'API-KEY': self.API_key,
             'Content-type': 'multipart/form-data; boundary={}'.format(boundary),
         }
-        
-        if project_id is not None:
-            headers['projectId']=project_id
             
         conn.request("POST", "/api/analysis", payload, headers)
         res = conn.getresponse()
