@@ -5,7 +5,7 @@ The Engisense API understands engineering drawings & documents.
 It allows you to do 
 
 1. Symbol counting & extraction 🔢
-2. Line segment detection & extraction 🇵🇱
+2. Line segment detection & extraction 📈
 
 
 Examples:
