@@ -8,5 +8,12 @@ It allows you to do
 2. Line segment detection & extraction 📈
 
 
-Examples:
+### Install from pip
+
+```pip install d8n```
+
+https://pypi.org/project/d8n/
+
+
+### Examples:
 https://colab.research.google.com/drive/1B5gNg3cKMl0a5nnZyddVjsNPiCHpIJwM
