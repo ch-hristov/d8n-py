@@ -2,7 +2,7 @@
 import zipfile
 from d8n.d8nClient import d8nClient
 
-api_key = 'mark_viewport'
+api_key = ''
 client = d8nClient(api_key)
 result_id = client.from_local_file('/Users/christosavovchristov/symbol-api/d8n-js/test.jpeg')
 
