@@ -1,5 +1,7 @@
 ## Engisense: Extract information from engineering documents 🔥
 
+[![Upload Python Package](https://github.com/ch-hristov/d8n-py/actions/workflows/python-publish.yml/badge.svg)](https://github.com/ch-hristov/d8n-py/actions/workflows/python-publish.yml)
+
 The Engisense API understands engineering drawings & documents.
 
 It allows you to do 
