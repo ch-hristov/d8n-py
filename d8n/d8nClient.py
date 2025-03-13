@@ -2,6 +2,7 @@ import http.client
 from io import BytesIO
 import mimetypes
 from codecs import encode
+import os
 from threading import Timer
 import time
 import requests
@@ -47,6 +48,7 @@ class d8nResult:
     status: str
     api_version: str
     help: str
+    task_list: list[str]
 
     @staticmethod
     def from_dict(obj: Any) -> 'd8nResult':
@@ -54,18 +56,20 @@ class d8nResult:
         _status = str(obj.get("status"))
         _api_version = str(obj.get("api_version"))
         _help = str(obj.get("help"))
-        return d8nResult(_id, _status, _api_version, _help)
+        _task_list = obj.get("task_list")
+        return d8nResult(_id, _status, _api_version, _help, _task_list)
 
 class d8nClient:
-    def __init__(self, api_key):
+    def __init__(self, api_key, api_url="https://engisense.com"):
         """_summary_
 
         Args:
             api_key (_type_): The API key provided to you by engisense
         """
+        if not api_url.startswith(("http://", "https://")):
+            api_url = "http://" + api_url  # Default to HTTP for localhost
+        self._url = api_url.rstrip("/")  # Remove trailing slashes
         self.API_key = api_key
-        self._url = 'engisense.com'
-
 
     def wait_till_completed(self, id, timeout = 15, print_debug_info = False):
         """_summary_
@@ -85,55 +89,60 @@ class d8nClient:
            status =  data.status
            if print_debug_info:
                print("Current task: {0}".format(status))
-           if 'Completed' in status or 'Failed' in status:
+           if 'Finished' in status or 'Failed' in status:
+               return data
                break
            if timer.finished.isSet():
                raise Exception("Timeout :/")
            
            time.sleep(1)
+        return None
 
-    def from_local_file(self, path, project_id = None):
-        """_summary_
+    def from_local_file(self, file_path, project_id="default"):
+        """
+        Sends an image or PDF file to the API for analysis.
 
         Args:
-            path (_type_): The path to the image or pdf file you want to analyse
-            project_id (_type_, optional): Optional parameter to group documents into a single project. Defaults to None.
+            file_path (str): Path to the image or PDF file.
+            project_id (str, optional): Optional parameter to group documents into a project.
 
         Returns:
-            _type_: Returns 
+            dict: API response as a dictionary.
         """
-        conn = http.client.HTTPSConnection(self._url)
-        dataList = []
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
 
-        boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
-        dataList.append(encode('--' + boundary))
-        dataList.append(encode('Content-Disposition: form-data; name=file; filename={0}'.format(path)))
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            raise ValueError(f"File is empty: {file_path}")
 
-        fileType = mimetypes.guess_type(path)[0] or 'application/octet-stream'
-        dataList.append(encode('Content-Type: {}'.format(fileType)))
-        dataList.append(encode(''))
-    
-        with open(path, 'rb') as f:
-            dataList.append(f.read())
+        print(f"Uploading file {file_path}, Size: {file_size} bytes")
 
-        dataList.append(encode('--'+boundary+'--'))
-        dataList.append(encode(''))
-        body = b'\r\n'.join(dataList)
+        url = f"{self._url}/api/analysis"
+        file_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
 
-        payload = body
         headers = {
-            'API-KEY': self.API_key,
-            'Content-type': 'multipart/form-data; boundary={}'.format(boundary),
+            "API-KEY": self.API_key
         }
-            
-        conn.request("POST", "/api/analysis", payload, headers)
-        res = conn.getresponse()
-        data = res.read()
-        data = (data.decode("utf-8"))
-        return d8nResult.from_dict(json.loads(data))
 
+        data = {}
+        if project_id:
+            data["project_id"] = project_id
+
+        # ✅ Open file in binary mode and send correctly
+        with open(file_path, "rb") as f:
+            files = {"file": (os.path.basename(file_path), f, file_type)}
+            response = requests.post(url, headers=headers, files=files)
+
+        print(f"Response Status: {response.status_code}")
+        print(f"Response Text: {response.text}")
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Error: {response.status_code} - {response.text}")
     def fetch_status(self, id:str) -> d8nResult:
-        url = "https://{0}/api/get_status?id={1}".format(self._url,id)
+        url = "{0}/api/get_document_status?id={1}".format(self._url,id)
 
         payload={}
         files={}
@@ -142,7 +151,7 @@ class d8nClient:
         }
 
         response = requests.request("GET", url, headers=headers, data=payload, files=files)
-        if response.status_code < 200 and response.status_code >= 300:
+        if response.status_code < 200 or response.status_code >= 300:
             raise Exception(str(response.status_code))
         return d8nResult.from_dict(json.loads(response.content.decode('utf-8')))
 
@@ -155,15 +164,14 @@ class d8nClient:
         Returns:
             d8nCompleteResult: The list of predicted bounding boxes, their types and coordinates
         """
-        url = "https://{0}/api/completed?id={1}".format(self._url,id)
+        url = "{0}/api/completed?id={1}&page=0".format(self._url,id)
         payload={}
         headers = {
             'API-KEY': self.API_key
         }
 
         response = requests.request("GET", url, headers=headers, data=payload)
-
-        data = json.loads(response.content.decode('utf-8'))
+        data = response.json()
 
         return [d8nCompleteResult.from_dict(x) for x in data]
     
@@ -176,7 +184,7 @@ class d8nClient:
         Returns:
             PIL.Image: A PIL.Image rendering the detected lines
         """
-        url = "https://{0}/api/get_lines?id={1}".format(self._url,id)
+        url = "{0}/api/get_lines?id={1}".format(self._url,id)
         payload={}
         headers = {
             'API-KEY': self.API_key
@@ -197,7 +205,7 @@ class d8nClient:
         Returns:
             PIL.Image: A PIL.Image rendering the detected symbols
         """
-        url = "https://{0}/api/get_symbols?id={1}".format(self._url,id)
+        url = "{0}/api/get_symbols?id={1}".format(self._url,id)
         payload={}
         headers = {
             'API-KEY': self.API_key
@@ -209,7 +217,7 @@ class d8nClient:
         return Image.open(bytesIO)
 
     def download_entry(self, id, format = 'yolo'):
-        url = "https://{0}/api/completed?id={1}".format(self._url,id)
+        url = "{0}/api/completed?id={1}".format(self._url,id)
         
         headers = {
             'API-KEY': self.API_key,
